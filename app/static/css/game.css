@@ -15,15 +15,16 @@ body.screen-play.is-card-interacting {
 
 .desk-stage {
   position: relative;
+  isolation: isolate;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 1.5rem;
   background:
-    radial-gradient(circle at top, rgba(248, 241, 226, 0.14), transparent 28%),
-    radial-gradient(circle at 20% 80%, rgba(169, 130, 58, 0.14), transparent 34%),
-    linear-gradient(145deg, rgba(41, 67, 59, 0.2), rgba(111, 61, 53, 0.08)),
-    #49382c;
+    radial-gradient(ellipse at 50% 44%, rgba(19, 24, 20, 0.04) 14%, rgba(18, 16, 13, 0.7) 100%),
+    linear-gradient(180deg, rgba(25, 41, 35, 0.14), rgba(42, 26, 20, 0.52)),
+    url("../images/mipt-campus-background.webp") center / cover no-repeat,
+    #202923;
   overflow: hidden;
 }
 
@@ -31,31 +32,30 @@ body.screen-play.is-card-interacting {
 .desk-stage::after {
   content: "";
   position: absolute;
-  border-radius: 50%;
+  z-index: 0;
   pointer-events: none;
-  opacity: 0.6;
 }
 
 .desk-stage::before {
-  top: 10%;
-  left: 8%;
-  width: min(16vw, 220px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(248, 241, 226, 0.08);
+  inset: clamp(0.55rem, 1.4vw, 1.15rem);
+  border: 1px solid rgba(232, 207, 155, 0.18);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 19, 0.42),
+    inset 0 0 80px rgba(13, 16, 14, 0.22);
 }
 
 .desk-stage::after {
-  right: 10%;
-  bottom: 8%;
-  width: min(24vw, 320px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(248, 241, 226, 0.06);
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(12, 17, 14, 0.38), transparent 22%, transparent 78%, rgba(12, 17, 14, 0.38)),
+    linear-gradient(180deg, transparent 66%, rgba(17, 14, 12, 0.46));
 }
 
 .stage-reveal {
   position: absolute;
   top: 50%;
-  z-index: 0;
+  z-index: 1;
   width: min(34vw, 360px);
   min-height: 52vh;
   display: grid;
@@ -93,7 +93,7 @@ body.screen-play.is-card-interacting {
 
 .card-stack {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   width: min(100%, 430px);
   display: grid;
   place-items: center;
@@ -596,6 +596,9 @@ body.screen-summary .review-entry:nth-child(6) {
   .desk-stage {
     min-height: 100vh;
     padding: 0.7rem;
+    background-position: center, center, center 2.25rem;
+    background-size: auto, auto, 135% auto;
+    background-repeat: no-repeat;
   }
 
   .stage-reveal {
