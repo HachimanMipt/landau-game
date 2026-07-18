@@ -299,7 +299,7 @@ def advance_run(
     asks_for_details = result_card.meta["asks_for_details"]
     if asks_for_details and swipe_direction == SwipeDirection.RIGHT:
         # "Дальше" skips the technical breakdown but preserves the historical closing note.
-        run.result_step = dialogue_total - 1
+        run.result_step = result_card.meta["history_start"]
         session.add(run)
         session.commit()
         session.refresh(run)

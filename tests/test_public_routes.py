@@ -1,9 +1,10 @@
+from app.cards import ONBOARDING_CARD_COUNT
 from app.models import GameRun, Participant, Response, ScreenState
 
 
 def register_player(client, *, name: str = "Алина", team: str = "10Б"):
     client.get("/")
-    for _ in range(4):
+    for _ in range(ONBOARDING_CARD_COUNT - 1):
         client.post("/api/onboarding/next")
     return client.post(
         "/api/onboarding/register",
@@ -13,7 +14,7 @@ def register_player(client, *, name: str = "Алина", team: str = "10Б"):
 
 
 def advance_until_next_work_or_final(client) -> None:
-    for _ in range(4):
+    for _ in range(8):
         response = client.post("/play/next", follow_redirects=False)
         assert response.status_code == 303
         page = client.get("/play")
@@ -58,6 +59,11 @@ def test_onboarding_uses_landau_and_text_cards_before_name_entry(client) -> None
     assert "/static/images/image.png" in welcome.text
 
     client.post("/api/onboarding/next")
+    classification = client.get("/")
+    assert "физиком второго с половиной класса" in classification.text
+    assert "/static/images/image.png" in classification.text
+
+    client.post("/api/onboarding/next")
     classification_note = client.get("/")
     assert "Сноска о классификации" in classification_note.text
     assert "физик первого класса" in classification_note.text
@@ -69,10 +75,19 @@ def test_onboarding_uses_landau_and_text_cards_before_name_entry(client) -> None
     assert "девять экзаменов" in theorminimum.text
 
     client.post("/api/onboarding/next")
+    theorminimum_exam = client.get("/")
+    assert "Шпаргалки не помогали" in theorminimum_exam.text
+    assert "43 человека" in theorminimum_exam.text
+
+    client.post("/api/onboarding/next")
     assistant_request = client.get("/")
     assert "нужны помощники" in assistant_request.text
-    assert "Как вас зовут?" in assistant_request.text
     assert "data-participant-name" not in assistant_request.text
+
+    client.post("/api/onboarding/next")
+    instructions = client.get("/")
+    assert "Смахивайте влево" in instructions.text
+    assert "Как вас зовут?" in instructions.text
 
     client.post("/api/onboarding/next")
     identity = client.get("/")
@@ -128,8 +143,7 @@ def test_answer_flow_switches_to_result_and_advances(client, db_session) -> None
     history_page = client.get("/play")
     assert "уровней Ландау" in history_page.text
 
-    advance_response = client.post("/play/next", follow_redirects=False)
-    assert advance_response.status_code == 303
+    advance_until_next_work_or_final(client)
 
     next_question_page = client.get("/play")
     assert "Архивное дело № 02" in next_question_page.text
@@ -164,8 +178,7 @@ def test_detected_inaccuracy_can_show_historical_explanation(client) -> None:
         data={"selected_verdict": "correct", "input_method": "button"},
         follow_redirects=False,
     )
-    client.post("/play/next", follow_redirects=False)
-    client.post("/play/next", follow_redirects=False)
+    advance_until_next_work_or_final(client)
 
     second_question = client.get("/play")
     assert "Архивное дело № 02" in second_question.text
@@ -183,8 +196,7 @@ def test_detected_inaccuracy_can_show_historical_explanation(client) -> None:
     client.post("/play/next", data={"swipe_direction": "left"}, follow_redirects=False)
     detail_page = client.get("/play")
     assert "Магнитные свойства атомов не исчезают" in detail_page.text
-    client.post("/play/next", follow_redirects=False)
-    client.post("/play/next", follow_redirects=False)
+    advance_until_next_work_or_final(client)
     third_question = client.get("/play")
     assert "Архивное дело № 03" in third_question.text
 

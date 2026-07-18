@@ -433,7 +433,7 @@ body.screen-play.is-card-interacting {
 
 .landau-portrait {
   width: min(100%, 290px);
-  max-height: min(46vh, 390px);
+  max-height: min(38vh, 320px);
   margin: 0 auto -1px;
   display: block;
   align-self: end;

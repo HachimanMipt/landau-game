@@ -1,15 +1,26 @@
+from app.cards import ONBOARDING_CARD_COUNT
 from app.models import Response
 
 
 def register_player(client):
     client.get("/")
-    for _ in range(4):
+    for _ in range(ONBOARDING_CARD_COUNT - 1):
         client.post("/api/onboarding/next")
     return client.post(
         "/api/onboarding/register",
         json={"participant_name": "Алина"},
         follow_redirects=False,
     )
+
+
+def advance_until_next_work(client) -> None:
+    for _ in range(8):
+        response = client.post("/api/play/next")
+        assert response.status_code == 200
+        page = client.get("/play")
+        if "Проверка студенческой работы" in page.text:
+            return
+    raise AssertionError("Dialogue did not reach the next work.")
 
 
 def test_answer_api_requires_active_run(client) -> None:
@@ -90,9 +101,7 @@ def test_next_api_advances_after_result_card(client) -> None:
             "input_method": "swipe",
         },
     )
-    client.post("/api/play/next")
-    client.post("/api/play/next")
-    client.get("/play")
+    advance_until_next_work(client)
     client.post(
         "/api/answers/current",
         json={
@@ -113,8 +122,8 @@ def test_next_api_advances_after_result_card(client) -> None:
 
     client.post("/api/play/next")
     history_line = client.get("/play")
-    assert "В 1937 году" in history_line.text
-    client.post("/api/play/next")
+    assert "Именно общий порядок" in history_line.text
+    advance_until_next_work(client)
     next_question_page = client.get("/play")
     assert "Архивное дело № 03" in next_question_page.text
 
@@ -126,9 +135,7 @@ def test_next_api_skips_error_explanation_but_keeps_history_when_swiped_right(cl
         "/api/answers/current",
         json={"selected_verdict": "correct", "input_method": "swipe"},
     )
-    client.post("/api/play/next")
-    client.post("/api/play/next")
-    client.get("/play")
+    advance_until_next_work(client)
     client.post(
         "/api/answers/current",
         json={"selected_verdict": "inaccuracy", "input_method": "swipe"},
@@ -138,9 +145,9 @@ def test_next_api_skips_error_explanation_but_keeps_history_when_swiped_right(cl
 
     assert response.status_code == 200
     history_line = client.get("/play")
-    assert "В 1937 году" in history_line.text
+    assert "Именно общий порядок" in history_line.text
     assert "Магнитные свойства атомов не исчезают" not in history_line.text
 
-    client.post("/api/play/next")
+    advance_until_next_work(client)
     next_question_page = client.get("/play")
     assert "Архивное дело № 03" in next_question_page.text

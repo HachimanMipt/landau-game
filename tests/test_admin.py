@@ -1,10 +1,11 @@
 from app.config import get_settings
+from app.cards import ONBOARDING_CARD_COUNT
 from app.models import GameRun, Participant, Response
 
 
 def register_player(client, *, name: str = "Алина", team: str = "10Б"):
     client.get("/")
-    for _ in range(4):
+    for _ in range(ONBOARDING_CARD_COUNT - 1):
         client.post("/api/onboarding/next")
     return client.post(
         "/api/onboarding/register",
@@ -22,7 +23,7 @@ def login_admin(client, *, password: str | None = None):
 
 
 def advance_until_next_work_or_final(client) -> None:
-    for _ in range(4):
+    for _ in range(8):
         client.post("/play/next", follow_redirects=False)
         page = client.get("/play")
         if "Проверка студенческой работы" in page.text or "Итог прохождения" in page.text:

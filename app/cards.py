@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -22,7 +23,52 @@ class CardViewModel:
     helper_text: str | None = None
 
 
-ONBOARDING_CARD_COUNT = 5
+ONBOARDING_CARD_COUNT = 8
+MAX_LANDAU_CARD_CHARACTERS = 190
+
+
+def split_landau_dialogue(text: str) -> list[str]:
+    """Keep a Landau reply readable beside the portrait on a phone-sized card."""
+    chunks: list[str] = []
+    for paragraph in (part.strip() for part in text.split("\n\n")):
+        if not paragraph:
+            continue
+
+        sentences = re.split(r"(?<=[.!?…])\s+", paragraph)
+        current = ""
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+
+            if len(sentence) > MAX_LANDAU_CARD_CHARACTERS:
+                words = sentence.split()
+                sentence_parts: list[str] = []
+                current_part = ""
+                for word in words:
+                    candidate = f"{current_part} {word}".strip()
+                    if current_part and len(candidate) > MAX_LANDAU_CARD_CHARACTERS:
+                        sentence_parts.append(current_part)
+                        current_part = word
+                    else:
+                        current_part = candidate
+                if current_part:
+                    sentence_parts.append(current_part)
+            else:
+                sentence_parts = [sentence]
+
+            for part in sentence_parts:
+                candidate = f"{current} {part}".strip()
+                if current and len(candidate) > MAX_LANDAU_CARD_CHARACTERS:
+                    chunks.append(current)
+                    current = part
+                else:
+                    current = candidate
+
+        if current:
+            chunks.append(current)
+
+    return chunks or [text]
 
 
 def build_onboarding_card(step: int) -> CardViewModel:
@@ -32,11 +78,8 @@ def build_onboarding_card(step: int) -> CardViewModel:
             card_type="landau",
             card_id="onboarding-welcome",
             body=(
-                "Приветствую! Я Лев Ландау, теоретический физик. Работал я с 1920-х до 1960-х годов: "
-                "от квантовой механики до жидкого гелия.\n\n"
-                "Причем работал неплохо. В собственной шутливой классификации я долго числил себя физиком второго с половиной класса. "
-                "Позже, довольный одной из своих работ, все-таки повысил себя до второго. Скромность полезна, "
-                "но не до такой же степени."
+                "Приветствую! Я Лев Ландау, теоретический физик. Работал с 1920-х до 1960-х годов: "
+                "от квантовой механики до жидкого гелия."
             ),
             meta={"is_onboarding": True},
             portrait_image_url="/static/images/image.png",
@@ -46,28 +89,40 @@ def build_onboarding_card(step: int) -> CardViewModel:
 
     if step == 1:
         return CardViewModel(
+            card_type="landau",
+            card_id="onboarding-classification",
+            body=(
+                "Работал, кстати, неплохо. В собственной шутливой классификации я долго числил себя "
+                "физиком второго с половиной класса. Позже повысил себя до второго."
+            ),
+            meta={"is_onboarding": True},
+            portrait_image_url="/static/images/image.png",
+            left_label="Скромно",
+            right_label="Дальше",
+        )
+
+    if step == 2:
+        return CardViewModel(
             card_type="note",
             card_id="onboarding-classification-note",
             title="Сноска о классификации",
             body=(
                 "Шкала Ландау была шутливой и логарифмической: физик первого класса, по ней, "
                 "сделал в десять раз больше физика второго.\n\n"
-                "Класс 0,5 Ландау оставлял Эйнштейну, а крупнейших физиков XX века относил к первому классу."
+                "Класс 0,5 Ландау оставлял Эйнштейну, а крупнейших физиков XX века относил к первому классу, например Нильса Бора и Вернера Гейзенберга "
             ),
             meta={"is_onboarding": True},
             left_label="Ясно",
             right_label="Дальше",
         )
 
-    if step == 2:
+    if step == 3:
         return CardViewModel(
             card_type="landau",
             card_id="onboarding-theorminimum",
             body=(
-                "Преподавал я на физтехе и физфаке. Прежде чем попасть ко мне в группу, надо было сдать теоретический минимум, легендарная комбинация проверок: девять экзаменов "
-                "по математике и теоретической физике.\n\n"
-                "Договорился со мной о времени, получил билет и сел за чистый лист. Шпаргалки не помогали: я спрашивал "
-                "так, чтобы пришлось думать. Физику нужно понимать, а не зубрить. С 1933 по 1961 год весь минимум сдали лишь 43 человека!"
+                "Я преподавал на физтехе и физфаке. Прежде чем попасть ко мне в группу, нужно было сдать "
+                "легендарный теоретический минимум: девять экзаменов по математике и теоретической физике."
             ),
             meta={"is_onboarding": True},
             portrait_image_url="/static/images/image.png",
@@ -75,14 +130,41 @@ def build_onboarding_card(step: int) -> CardViewModel:
             right_label="Дальше",
         )
 
-    if step == 3:
+    if step == 4:
+        return CardViewModel(
+            card_type="landau",
+            card_id="onboarding-theorminimum-exam",
+            body=(
+                "Студент договорился о времени, я выдавал ему задачу и сажал за чистый лист. Шпаргалки не помогали: "
+                "физику нужно понимать, а не зубрить. С 1933 по 1961 год минимум сдали 43 человека."
+            ),
+            meta={"is_onboarding": True},
+            portrait_image_url="/static/images/image.png",
+            left_label="Строго",
+            right_label="Дальше",
+        )
+
+    if step == 5:
         return CardViewModel(
             card_type="landau",
             card_id="onboarding-assistant-request",
             body=(
-                "Однако один я не спровляюсь и мне как раз нужны помощники для проверки ответов студентов. Далее я дам вам посмотреть на архивные ответы студентов и вы попробуете найти в них ошибки. Смахивайте влево если ответ неточный и вправо если точный"
-                "Посмотрим, умеете ли вы замечать физические неточности без лишней строгости.\n\n"
-                "Как вас зовут?"
+                "Одному мне не справиться: нужны помощники для проверки ответов студентов. Я покажу вам "
+                "архивные работы, а вы попробуете найти в них ошибки."
+            ),
+            meta={"is_onboarding": True},
+            portrait_image_url="/static/images/image.png",
+            left_label="Помогу",
+            right_label="Дальше",
+        )
+
+    if step == 6:
+        return CardViewModel(
+            card_type="landau",
+            card_id="onboarding-swipe-instructions",
+            body=(
+                "Смахивайте влево, если ответ неточный, и вправо, если точный. Посмотрим, умеете ли вы "
+                "замечать физические неточности без лишней строгости.\n\nКак вас зовут?"
             ),
             meta={"is_onboarding": True},
             portrait_image_url="/static/images/image.png",
@@ -129,33 +211,42 @@ def build_landau_card(
 ) -> CardViewModel:
     student_answer_accepted = is_correct and scene.correct_verdict == SelectedVerdict.CORRECT
     found_inaccuracy = is_correct and scene.correct_verdict == SelectedVerdict.INACCURACY
+    historical_lines = split_landau_dialogue(scene.landau_card.inaccuracy_explanation)
     if student_answer_accepted:
         dialogue_lines = [
             "Все верно. Не надо валить студента, когда он правильно отвечает.",
-            scene.landau_card.inaccuracy_explanation,
+            *historical_lines,
         ]
+        history_start = 1
     elif found_inaccuracy:
+        explanation_lines = split_landau_dialogue(scene.landau_card.explanation)
         dialogue_lines = [
             "Отлично подмечено, понимания в этом ответе явно не хватало. Рассказать поподробнее, в чем ошибка?",
-            scene.landau_card.explanation,
-            scene.landau_card.inaccuracy_explanation,
+            *explanation_lines,
+            *historical_lines,
         ]
+        history_start = 1 + len(explanation_lines)
     elif scene.correct_verdict == SelectedVerdict.INACCURACY:
+        explanation_lines = split_landau_dialogue(scene.landau_card.explanation)
         dialogue_lines = [
-            scene.landau_card.explanation,
-            scene.landau_card.inaccuracy_explanation,
+            *explanation_lines,
+            *historical_lines,
         ]
+        history_start = len(explanation_lines)
     else:
         verdict_title = (
             scene.landau_card.verdict_title_correct
             if is_correct
             else scene.landau_card.verdict_title_wrong
         )
+        opening_lines = split_landau_dialogue(f"{verdict_title}. {scene.landau_card.character_quote}")
+        explanation_lines = split_landau_dialogue(scene.landau_card.explanation)
         dialogue_lines = [
-            f"{verdict_title}. {scene.landau_card.character_quote}",
-            scene.landau_card.explanation,
-            scene.landau_card.inaccuracy_explanation,
+            *opening_lines,
+            *explanation_lines,
+            *historical_lines,
         ]
+        history_start = len(opening_lines) + len(explanation_lines)
     dialogue_step = min(max(dialogue_step, 0), len(dialogue_lines) - 1)
 
     return CardViewModel(
@@ -166,6 +257,7 @@ def build_landau_card(
             "dialogue_lines": dialogue_lines,
             "dialogue_step": dialogue_step,
             "dialogue_total": len(dialogue_lines),
+            "history_start": history_start,
             "is_affirming": student_answer_accepted,
             "asks_for_details": found_inaccuracy and dialogue_step == 0,
         },
