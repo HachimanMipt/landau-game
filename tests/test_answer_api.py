@@ -91,6 +91,7 @@ def test_next_api_advances_after_result_card(client) -> None:
         },
     )
     client.post("/api/play/next")
+    client.post("/api/play/next")
     client.get("/play")
     client.post(
         "/api/answers/current",
@@ -125,6 +126,7 @@ def test_next_api_skips_error_explanation_but_keeps_history_when_swiped_right(cl
         "/api/answers/current",
         json={"selected_verdict": "correct", "input_method": "swipe"},
     )
+    client.post("/api/play/next")
     client.post("/api/play/next")
     client.get("/play")
     client.post(

@@ -125,6 +125,12 @@ def test_answer_flow_switches_to_result_and_advances(client, db_session) -> None
     advance_response = client.post("/play/next", follow_redirects=False)
     assert advance_response.status_code == 303
 
+    history_page = client.get("/play")
+    assert "уровней Ландау" in history_page.text
+
+    advance_response = client.post("/play/next", follow_redirects=False)
+    assert advance_response.status_code == 303
+
     next_question_page = client.get("/play")
     assert "Архивное дело № 02" in next_question_page.text
     assert "Работа 2 из 6" not in next_question_page.text
@@ -158,6 +164,7 @@ def test_detected_inaccuracy_can_show_historical_explanation(client) -> None:
         data={"selected_verdict": "correct", "input_method": "button"},
         follow_redirects=False,
     )
+    client.post("/play/next", follow_redirects=False)
     client.post("/play/next", follow_redirects=False)
 
     second_question = client.get("/play")
