@@ -2,7 +2,7 @@ services:
   - type: web
     name: landau-game
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -e .
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -13,8 +13,4 @@ services:
       - key: LANDAU_ADMIN_PASSWORD
         sync: false
       - key: LANDAU_DATABASE_URL
-        value: sqlite:////var/data/app.db
-    disk:
-      name: landau-data
-      mountPath: /var/data
-      sizeGB: 1
+        value: sqlite:///data/app.db

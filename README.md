@@ -80,12 +80,12 @@ pytest
 
 The repository includes a `render.yaml` Blueprint for deploying the game to Render.
 Push the repository to GitHub, create a new Blueprint on Render, and select the
-repository. Render will use the Blueprint to create the web service, HTTPS URL,
-environment variables, and a persistent disk for the SQLite database.
+repository. Render will use the Blueprint to create a free web service, HTTPS URL,
+and environment variables for the app.
 
-The service uses a paid `starter` instance because SQLite needs a persistent disk.
-For a temporary demo, you can change `plan` to `free` and remove the `disk`
-section, but game results may be lost when the service restarts or redeploys.
+The free service uses ephemeral SQLite storage. Game and admin data may be lost
+when the service sleeps, restarts, or redeploys. It can also take about a minute
+to wake up after inactivity, so open the game once shortly before the event.
 
 During the first Blueprint setup, Render will ask for `LANDAU_ADMIN_PASSWORD`.
 Choose a strong password. `LANDAU_SECRET_KEY` is generated automatically.
