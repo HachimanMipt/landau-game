@@ -97,7 +97,6 @@ body.screen-play.is-card-interacting {
   width: min(100%, 430px);
   display: grid;
   place-items: center;
-  perspective: 1600px;
 }
 
 .card-stack::before,
@@ -138,13 +137,13 @@ body.screen-play.is-card-interacting {
     var(--paper-surface);
   box-shadow: 0 22px 44px rgba(25, 18, 11, 0.28);
   touch-action: none;
-  transition: transform 240ms ease, box-shadow 240ms ease, opacity 240ms ease;
-  animation: card-rise 280ms ease both;
+  transition: box-shadow 180ms ease, opacity 220ms ease;
+  animation: card-fade-in 180ms ease both;
   max-height: min(78vh, 760px);
   overflow: visible;
   will-change: transform, opacity;
   -webkit-tap-highlight-color: transparent;
-  transform-origin: 50% 72%;
+  transform-origin: 50% 100%;
   z-index: 2;
   backface-visibility: hidden;
 }
@@ -170,22 +169,35 @@ body.screen-play.is-card-interacting {
     var(--paper-surface);
 }
 
+.paper-card.is-held,
 .paper-card.is-dragging {
+  cursor: grabbing;
   transition: none;
-  box-shadow: 0 42px 76px rgba(25, 18, 11, 0.34);
+  animation: none;
+}
+
+.paper-card.is-dragging {
+  box-shadow: 0 30px 54px rgba(25, 18, 11, 0.32);
 }
 
 .paper-card.is-returning {
-  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 220ms ease;
+  transition:
+    transform 340ms cubic-bezier(0.2, 0.86, 0.28, 1.08),
+    box-shadow 300ms ease;
 }
 
 .paper-card.is-committing {
-  transition: transform 340ms cubic-bezier(0.18, 0.82, 0.14, 1), opacity 340ms ease-out;
+  transition:
+    transform 360ms cubic-bezier(0.16, 0.72, 0.22, 1),
+    opacity 260ms ease-out;
 }
 
 .paper-card.is-submitting {
-  opacity: 0.42;
   pointer-events: none;
+}
+
+.paper-card.is-submitting:not(.is-committing) {
+  opacity: 0.42;
 }
 
 .paper-card--decision.is-committing {
@@ -219,13 +231,6 @@ body.screen-play.is-card-interacting {
   overscroll-behavior: contain;
   scrollbar-gutter: stable both-edges;
   padding-right: 0.25rem;
-}
-
-.paper-card__header,
-.paper-card__content,
-.landau-layout,
-.paper-card__footer {
-  transition: transform 160ms ease, opacity 160ms ease;
 }
 
 .paper-card__header h3,
@@ -292,19 +297,20 @@ body.screen-play.is-card-interacting {
   text-transform: uppercase;
   opacity: 0;
   pointer-events: none;
-  transform: scale(0.96);
+  transform: translateX(-50%) scale(0.96);
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .swipe-overlay--left {
-  left: 1rem;
+  left: 46%;
   border: 1px solid rgba(248, 241, 226, 0.32);
   background: rgba(111, 61, 53, 0.9);
   color: #f8f1e2;
 }
 
 .swipe-overlay--right {
-  right: 1rem;
+  right: auto;
+  left: 54%;
   border: 1px solid rgba(248, 241, 226, 0.32);
   background: rgba(41, 67, 59, 0.9);
   color: #f8f1e2;
@@ -321,30 +327,10 @@ body.screen-play.is-card-interacting {
 .paper-card[data-drag-direction="left"] .swipe-overlay--left,
 .paper-card[data-drag-direction="right"] .swipe-overlay--right {
   opacity: var(--swipe-visual-opacity, 0.28);
-  transform: scale(calc(0.96 + var(--swipe-visual-scale, 0))) translateY(calc(var(--swipe-progress, 0) * -6px));
-}
-
-.paper-card[data-drag-direction="left"] .paper-card__header,
-.paper-card[data-drag-direction="left"] .paper-card__content,
-.paper-card[data-drag-direction="left"] .landau-layout,
-.paper-card[data-drag-direction="left"] .paper-card__footer {
-  transform: translateX(calc(var(--swipe-progress, 0) * -7px));
-}
-
-.paper-card[data-drag-direction="right"] .paper-card__header,
-.paper-card[data-drag-direction="right"] .paper-card__content,
-.paper-card[data-drag-direction="right"] .landau-layout,
-.paper-card[data-drag-direction="right"] .paper-card__footer {
-  transform: translateX(calc(var(--swipe-progress, 0) * 7px));
-}
-
-.paper-card.is-dragging .paper-stamp {
-  opacity: calc(0.84 + var(--swipe-progress, 0) * 0.16);
-}
-
-.paper-card.is-dragging .card-section,
-.paper-card.is-dragging .landau-quote {
-  box-shadow: 0 14px 24px rgba(25, 18, 11, 0.08);
+  transform:
+    translateX(-50%)
+    translateY(calc(var(--swipe-progress, 0) * -6px))
+    scale(calc(0.96 + var(--swipe-visual-scale, 0)));
 }
 
 .paper-card--landau .landau-layout {
@@ -439,7 +425,6 @@ body.screen-play.is-card-interacting {
   align-self: end;
   object-fit: cover;
   object-position: center top;
-  filter: drop-shadow(0 12px 20px rgba(35, 27, 18, 0.2));
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
@@ -499,48 +484,8 @@ body.screen-play.is-card-interacting {
 .paper-card--landau,
 .paper-card--note {
   animation:
-    card-rise 260ms ease both,
+    card-fade-in 180ms ease both,
     card-settle 420ms ease both;
-}
-
-.paper-card--landau .landau-layout > *,
-.paper-card--note .landau-layout > *,
-.paper-card--landau .paper-card__footer > * {
-  opacity: 0;
-  transform: translateY(14px);
-  animation: result-fragment-reveal 360ms ease forwards;
-}
-
-.paper-card--landau .landau-layout > :nth-child(1) {
-  animation-delay: 80ms;
-}
-
-.paper-card--note .landau-layout > :nth-child(1) {
-  animation-delay: 80ms;
-}
-
-.paper-card--landau .landau-layout > :nth-child(2) {
-  animation-delay: 140ms;
-}
-
-.paper-card--note .landau-layout > :nth-child(2) {
-  animation-delay: 140ms;
-}
-
-.paper-card--landau .landau-layout > :nth-child(3) {
-  animation-delay: 200ms;
-}
-
-.paper-card--landau .landau-layout > :nth-child(4) {
-  animation-delay: 260ms;
-}
-
-.paper-card--landau .paper-card__footer > :nth-child(1) {
-  animation-delay: 300ms;
-}
-
-.paper-card--landau .paper-card__footer > :nth-child(2) {
-  animation-delay: 340ms;
 }
 
 body.screen-summary .paper-form {
@@ -618,6 +563,16 @@ body.screen-summary .review-entry:nth-child(6) {
   }
 }
 
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 720px) {
   .desk-stage {
     min-height: 100vh;
@@ -663,9 +618,6 @@ body.screen-summary .review-entry:nth-child(6) {
 @media (prefers-reduced-motion: reduce) {
   .paper-card,
   .swipe-overlay,
-  .paper-card--landau .landau-layout > *,
-  .paper-card--note .landau-layout > *,
-  .paper-card--landau .paper-card__footer > *,
   body.screen-summary .summary-card,
   body.screen-summary .review-entry,
   body.screen-summary .paper-form {
@@ -673,9 +625,6 @@ body.screen-summary .review-entry:nth-child(6) {
     transition: none;
   }
 
-  .paper-card--landau .landau-layout > *,
-  .paper-card--note .landau-layout > *,
-  .paper-card--landau .paper-card__footer > *,
   body.screen-summary .summary-card,
   body.screen-summary .review-entry {
     opacity: 1;

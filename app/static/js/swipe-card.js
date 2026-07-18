@@ -1,34 +1,29 @@
 (function () {
-  var DEFAULTS = {
-    horizontalStartThreshold: 12,
-    verticalGuardThreshold: 8,
-    submitThreshold: 96,
-    maxRotation: 18,
-    maxVerticalShift: 12,
-    commitDurationMs: 340,
+  "use strict";
+
+  var PHYSICS = {
+    startDistance: 3,
+    defaultSubmitThreshold: 110,
+    flickVelocity: 0.55,
+    flickMinDistance: 34,
+    maxRotation: 12,
+    maxVerticalShift: 30,
+    snapDurationMs: 340,
+    commitDurationMs: 360,
   };
   var lockedScrollY = null;
+  var snapTimers = new WeakMap();
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
 
-  function shouldStartHorizontalDrag(dx, dy, options) {
-    return Math.abs(dx) >= options.horizontalStartThreshold && Math.abs(dx) > Math.abs(dy) + options.verticalGuardThreshold;
+  function directionForVerdict(selectedVerdict) {
+    return selectedVerdict === "inaccuracy" ? "left" : "right";
   }
 
-  function getSwipeVisualState(dx, options) {
-    var absoluteDx = Math.abs(dx);
-    var progress = clamp(absoluteDx / options.submitThreshold, 0, 1);
-    return {
-      direction: dx < 0 ? "left" : "right",
-      progress: progress,
-      opacity: 0.32 + progress * 0.58,
-      scaleBoost: 0.06 + progress * 0.32,
-      rotation: clamp(dx / 18, -options.maxRotation, options.maxRotation),
-      liftPx: progress * 14,
-      scale: 1.0 - progress * 0.035,
-    };
+  function isFormControl(target) {
+    return Boolean(target && target.closest && target.closest("input, textarea, select, button, label"));
   }
 
   function setInteractionLock(locked) {
@@ -58,210 +53,260 @@
     { passive: false }
   );
 
-  function parseThreshold(card) {
-    var rawValue = Number(card.dataset.submitThreshold);
-    if (Number.isFinite(rawValue) && rawValue > 0) {
-      return rawValue;
+  function submitThresholdFor(card) {
+    var configured = Number(card.dataset.submitThreshold);
+    if (Number.isFinite(configured) && configured > 0) {
+      return configured;
     }
-    return DEFAULTS.submitThreshold;
+    return Math.max(82, Math.min(PHYSICS.defaultSubmitThreshold, card.offsetWidth * 0.3));
   }
 
-  function applySwipeVisuals(card, dx, dy, options) {
-    var visual = getSwipeVisualState(dx, options);
-    var verticalShift = clamp(dy / 8, -options.maxVerticalShift, options.maxVerticalShift);
-    var anchorX = Number(card.dataset.swipeAnchorX || 50);
-    var anchorY = Number(card.dataset.swipeAnchorY || 72);
-    var topFreedom = clamp((90 - anchorY) / 62, 0.18, 1.18);
-    var tiltX = clamp(((-dy / 18) * topFreedom) + ((anchorY - 56) / 22), -11, 11);
-    var tiltY = clamp(((dx / 24) * topFreedom) + ((anchorX - 50) / 11), -15, 15);
-    var translateX = dx * (0.76 + topFreedom * 0.2);
-    var translateY = verticalShift - visual.liftPx * (0.72 + topFreedom * 0.28);
-    var scale = 1.0 - visual.progress * (0.02 + topFreedom * 0.02);
+  function motionFor(dx, dy, cardWidth, threshold) {
+    var progress = clamp(Math.abs(dx) / threshold, 0, 1);
+    var rotation = clamp((dx / Math.max(cardWidth, 1)) * 16, -PHYSICS.maxRotation, PHYSICS.maxRotation);
 
-    card.dataset.dragDirection = visual.direction;
-    card.style.setProperty("--swipe-progress", String(visual.progress));
-    card.style.setProperty("--swipe-visual-opacity", String(visual.opacity));
-    card.style.setProperty("--swipe-visual-scale", String(visual.scaleBoost));
-    card.style.setProperty("--swipe-lift", String(visual.liftPx) + "px");
-    card.style.setProperty("--swipe-card-scale", String(scale));
-    card.style.setProperty("--swipe-tilt-x", String(tiltX) + "deg");
-    card.style.setProperty("--swipe-tilt-y", String(tiltY) + "deg");
+    return {
+      direction: dx < 0 ? "left" : "right",
+      progress: progress,
+      translateX: dx * 0.72,
+      translateY: clamp(dy * 0.36, -PHYSICS.maxVerticalShift, PHYSICS.maxVerticalShift) - progress * 5,
+      rotation: rotation,
+      labelOpacity: clamp((Math.abs(dx) - 8) / Math.max(threshold * 0.72, 1), 0, 1),
+      labelScale: progress * 0.18,
+    };
+  }
+
+  function getSwipeVisualState(dx, options) {
+    var resolved = options || {};
+    return motionFor(
+      dx,
+      resolved.dy || 0,
+      resolved.cardWidth || 360,
+      resolved.submitThreshold || PHYSICS.defaultSubmitThreshold
+    );
+  }
+
+  function renderDrag(card, state) {
+    state.frameId = null;
+    var motion = motionFor(state.dx, state.dy, state.cardWidth, state.submitThreshold);
+
+    card.dataset.dragDirection = motion.direction;
+    card.style.setProperty("--swipe-progress", String(motion.progress));
+    card.style.setProperty("--swipe-visual-opacity", String(motion.labelOpacity));
+    card.style.setProperty("--swipe-visual-scale", String(motion.labelScale));
     card.style.transform =
-      "translate3d(" + translateX + "px, " + translateY + "px, 0) rotateZ(" + visual.rotation + "deg) rotateX(" + tiltX + "deg) rotateY(" + tiltY + "deg) scale(" + scale + ")";
+      "translate3d(" +
+      motion.translateX +
+      "px, " +
+      motion.translateY +
+      "px, 0) rotate(" +
+      motion.rotation +
+      "deg)";
   }
 
-  function clearSwipeVisuals(card) {
-    card.classList.remove("is-dragging", "is-returning");
+  function scheduleRender(card, state) {
+    if (state.frameId != null) {
+      return;
+    }
+    state.frameId = window.requestAnimationFrame(function () {
+      renderDrag(card, state);
+    });
+  }
+
+  function clearVisualState(card) {
+    card.classList.remove("is-held", "is-dragging", "is-returning");
     card.removeAttribute("data-drag-direction");
     card.style.removeProperty("--swipe-progress");
     card.style.removeProperty("--swipe-visual-opacity");
     card.style.removeProperty("--swipe-visual-scale");
-    card.style.removeProperty("--swipe-lift");
-    card.style.removeProperty("--swipe-card-scale");
-    card.style.removeProperty("--swipe-tilt-x");
-    card.style.removeProperty("--swipe-tilt-y");
     card.style.removeProperty("transform-origin");
-    delete card.dataset.swipeAnchorX;
-    delete card.dataset.swipeAnchorY;
-    card.style.transform = "";
+    card.style.removeProperty("transform");
   }
 
   function animateSnapBack(card) {
+    window.clearTimeout(snapTimers.get(card));
+    card.classList.remove("is-held", "is-dragging");
     card.classList.add("is-returning");
-    card.style.transform = "";
-    window.setTimeout(function () {
-      clearSwipeVisuals(card);
-    }, 190);
+    card.getBoundingClientRect();
+
+    window.requestAnimationFrame(function () {
+      card.style.transform = "translate3d(0, 0, 0) rotate(0deg)";
+    });
+
+    snapTimers.set(card, window.setTimeout(function () {
+      snapTimers.delete(card);
+      clearVisualState(card);
+    }, PHYSICS.snapDurationMs));
   }
 
-  function animateCommit(card, direction) {
-    var flyoutDistance = Math.max(window.innerWidth * 1.15, card.offsetWidth * 2.3);
+  function animateCommit(card, direction, releaseVelocity) {
+    var flyoutDistance = Math.max(window.innerWidth * 1.25, card.offsetWidth * 2.5);
     var signedDistance = direction === "left" ? -flyoutDistance : flyoutDistance;
-    var rotation = direction === "left" ? -24 : 24;
+    var rotation = direction === "left" ? -16 : 16;
+    var velocityLift = clamp(Math.abs(releaseVelocity || 0) * 12, 0, 16);
 
-    card.classList.remove("is-dragging", "is-returning");
+    card.classList.remove("is-held", "is-dragging", "is-returning");
     card.classList.add("is-committing", "is-submitting");
     card.dataset.dragDirection = direction;
-    card.style.setProperty("--swipe-visual-opacity", "0.9");
-    card.style.setProperty("--swipe-visual-scale", "0.24");
-    card.style.transform =
-      "translate3d(" + signedDistance + "px, -26px, 0) rotate(" + rotation + "deg) scale(0.94)";
+    card.style.setProperty("--swipe-visual-opacity", "1");
+    card.style.setProperty("--swipe-visual-scale", "0.18");
+    card.style.transformOrigin = "50% 100%";
+    card.getBoundingClientRect();
+
+    window.requestAnimationFrame(function () {
+      card.style.transform =
+        "translate3d(" + signedDistance + "px, " + (-20 - velocityLift) + "px, 0) rotate(" + rotation + "deg)";
+    });
   }
 
-  function directionForVerdict(selectedVerdict) {
-    return selectedVerdict === "inaccuracy" ? "left" : "right";
+  function shouldStartHorizontalDrag(dx, dy) {
+    return Math.hypot(dx, dy) >= PHYSICS.startDistance;
   }
 
-  function isFormControl(target) {
-    return Boolean(target && target.closest && target.closest("input, textarea, select, button, label"));
-  }
-
-  function attachSwipePreview(card) {
-    var options = {
-      horizontalStartThreshold: DEFAULTS.horizontalStartThreshold,
-      verticalGuardThreshold: DEFAULTS.verticalGuardThreshold,
-      submitThreshold: parseThreshold(card),
-      maxRotation: DEFAULTS.maxRotation,
-      maxVerticalShift: DEFAULTS.maxVerticalShift,
-    };
+  function attachSwipeCard(card) {
+    if (card.dataset.swipeWired === "true") {
+      return;
+    }
+    card.dataset.swipeWired = "true";
 
     var state = {
-      activePointerId: null,
+      pointerId: null,
       startX: 0,
       startY: 0,
-      dragging: false,
+      lastX: 0,
+      lastTime: 0,
       dx: 0,
       dy: 0,
+      velocityX: 0,
+      cardWidth: card.offsetWidth || 360,
+      submitThreshold: submitThresholdFor(card),
+      dragging: false,
       submitting: false,
+      frameId: null,
     };
 
-    function releasePointer(event) {
-      if (state.activePointerId != null && card.hasPointerCapture(state.activePointerId)) {
-        card.releasePointerCapture(state.activePointerId);
+    function updatePointer(event) {
+      var now = event.timeStamp || Date.now();
+      var elapsed = Math.max(1, now - state.lastTime);
+      var instantVelocity = (event.clientX - state.lastX) / elapsed;
+
+      state.velocityX = state.velocityX * 0.65 + instantVelocity * 0.35;
+      state.lastX = event.clientX;
+      state.lastTime = now;
+      state.dx = event.clientX - state.startX;
+      state.dy = event.clientY - state.startY;
+    }
+
+    function releasePointer() {
+      if (state.pointerId != null && card.hasPointerCapture(state.pointerId)) {
+        card.releasePointerCapture(state.pointerId);
       }
-      state.activePointerId = null;
-      if (event) {
-        state.dx = event.clientX - state.startX;
-        state.dy = event.clientY - state.startY;
-      }
+      state.pointerId = null;
       setInteractionLock(false);
     }
 
     function onPointerDown(event) {
-      if (state.submitting) {
-        return;
-      }
-      if (event.pointerType === "mouse" && event.button !== 0) {
-        return;
-      }
-      if (isFormControl(event.target)) {
+      if (state.submitting || (event.pointerType === "mouse" && event.button !== 0) || isFormControl(event.target)) {
         return;
       }
 
-      if (event.pointerType !== "mouse") {
+      if (event.cancelable) {
         event.preventDefault();
       }
 
-      state.activePointerId = event.pointerId;
+      state.pointerId = event.pointerId;
       state.startX = event.clientX;
       state.startY = event.clientY;
-      state.dragging = false;
+      state.lastX = event.clientX;
+      state.lastTime = event.timeStamp || Date.now();
       state.dx = 0;
       state.dy = 0;
-      var rect = card.getBoundingClientRect();
-      var anchorXPercent = clamp(((event.clientX - rect.left) / rect.width) * 100, 18, 82);
-      var anchorYPercent = clamp(((event.clientY - rect.top) / rect.height) * 100, 12, 86);
-      card.dataset.swipeAnchorX = String(anchorXPercent);
-      card.dataset.swipeAnchorY = String(anchorYPercent);
-      card.style.transformOrigin = anchorXPercent + "% 88%";
+      state.velocityX = 0;
+      state.dragging = false;
+      state.cardWidth = card.getBoundingClientRect().width || card.offsetWidth || 360;
+      state.submitThreshold = submitThresholdFor(card);
+
+      window.clearTimeout(snapTimers.get(card));
+      snapTimers.delete(card);
+      card.classList.remove("is-returning");
+      card.classList.add("is-held");
+      card.style.transformOrigin = "50% 100%";
       setInteractionLock(true);
       card.setPointerCapture(event.pointerId);
       card.focus({ preventScroll: true });
     }
 
     function onPointerMove(event) {
-      if (event.pointerId !== state.activePointerId || state.submitting) {
+      if (event.pointerId !== state.pointerId || state.submitting) {
         return;
       }
 
-      state.dx = event.clientX - state.startX;
-      state.dy = event.clientY - state.startY;
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      updatePointer(event);
 
-      event.preventDefault();
+      if (!state.dragging && !shouldStartHorizontalDrag(state.dx, state.dy)) {
+        return;
+      }
 
       if (!state.dragging) {
-        if (!shouldStartHorizontalDrag(state.dx, state.dy, options)) {
-          return;
-        }
-
         state.dragging = true;
         card.classList.add("is-dragging");
       }
-
-      applySwipeVisuals(card, state.dx, state.dy, options);
+      scheduleRender(card, state);
     }
 
     function onPointerUp(event) {
-      if (event.pointerId !== state.activePointerId || state.submitting) {
+      if (event.pointerId !== state.pointerId || state.submitting) {
         return;
       }
 
-      releasePointer(event);
+      updatePointer(event);
+      if (state.frameId != null) {
+        window.cancelAnimationFrame(state.frameId);
+        renderDrag(card, state);
+      }
+      releasePointer();
 
       if (!state.dragging) {
-        clearSwipeVisuals(card);
+        clearVisualState(card);
         return;
       }
 
+      var crossedDistance = Math.abs(state.dx) >= state.submitThreshold;
+      var flicked = Math.abs(state.velocityX) >= PHYSICS.flickVelocity && Math.abs(state.dx) >= PHYSICS.flickMinDistance;
+      if (!crossedDistance && !flicked) {
+        animateSnapBack(card);
+        return;
+      }
+
+      var direction = state.dx === 0 ? (state.velocityX < 0 ? "left" : "right") : state.dx < 0 ? "left" : "right";
       if (
-        Math.abs(state.dx) >= options.submitThreshold &&
-        typeof window.submitCardDirection === "function"
+        typeof window.canSubmitCardDirection === "function" &&
+        !window.canSubmitCardDirection(direction)
       ) {
-        var direction = state.dx < 0 ? "left" : "right";
-
-        if (
-          typeof window.canSubmitCardDirection === "function" &&
-          !window.canSubmitCardDirection(direction)
-        ) {
-          animateSnapBack(card);
-          return;
-        }
-
-        state.submitting = true;
-        animateCommit(card, direction);
-        window.submitCardDirection(direction, "swipe", { skipAnimation: true });
+        animateSnapBack(card);
         return;
       }
 
-      animateSnapBack(card);
+      state.submitting = true;
+      animateCommit(card, direction, state.velocityX);
+      if (typeof window.submitCardDirection === "function") {
+        window.submitCardDirection(direction, "swipe", { skipAnimation: true });
+      }
     }
 
     function onPointerCancel(event) {
-      if (event.pointerId !== state.activePointerId || state.submitting) {
+      if (event.pointerId !== state.pointerId || state.submitting) {
         return;
       }
-      releasePointer(event);
-      clearSwipeVisuals(card);
+      releasePointer();
+      if (state.dragging) {
+        animateSnapBack(card);
+      } else {
+        clearVisualState(card);
+      }
     }
 
     card.addEventListener("pointerdown", onPointerDown);
@@ -278,10 +323,10 @@
     getSwipeVisualState: getSwipeVisualState,
     animateCommit: animateCommit,
     directionForVerdict: directionForVerdict,
-    commitDurationMs: DEFAULTS.commitDurationMs,
+    commitDurationMs: PHYSICS.commitDurationMs,
   };
 
   window.initializeSwipePreview = function initializeSwipePreview() {
-    document.querySelectorAll("[data-swipe-preview]").forEach(attachSwipePreview);
+    document.querySelectorAll("[data-swipe-preview]").forEach(attachSwipeCard);
   };
 })();
