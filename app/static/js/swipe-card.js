@@ -9,7 +9,7 @@
     maxRotation: 12,
     maxVerticalShift: 30,
     snapDurationMs: 340,
-    commitDurationMs: 360,
+    commitDurationMs: 600,
   };
   var lockedScrollY = null;
   var snapTimers = new WeakMap();
@@ -140,10 +140,27 @@
   }
 
   function animateCommit(card, direction, releaseVelocity) {
-    var flyoutDistance = Math.max(window.innerWidth * 1.25, card.offsetWidth * 2.5);
-    var signedDistance = direction === "left" ? -flyoutDistance : flyoutDistance;
-    var rotation = direction === "left" ? -16 : 16;
+    var rotation = direction === "left" ? -20 : 20;
     var velocityLift = clamp(Math.abs(releaseVelocity || 0) * 12, 0, 16);
+    var rect = card.getBoundingClientRect();
+    var computedTransform = window.getComputedStyle(card).transform;
+    var Matrix = window.DOMMatrixReadOnly || window.WebKitCSSMatrix;
+    var currentTranslateX = 0;
+
+    if (Matrix && computedTransform && computedTransform !== "none") {
+      try {
+        currentTranslateX = new Matrix(computedTransform).m41 || 0;
+      } catch (error) {
+        currentTranslateX = 0;
+      }
+    }
+
+    var rotationClearance = card.offsetHeight * Math.sin((Math.abs(rotation) * Math.PI) / 180);
+    var exitPadding = rotationClearance + 48;
+    var remainingDistance = direction === "left"
+      ? rect.right + exitPadding
+      : window.innerWidth - rect.left + exitPadding;
+    var finalTranslateX = currentTranslateX + (direction === "left" ? -remainingDistance : remainingDistance);
 
     card.classList.remove("is-held", "is-dragging", "is-returning");
     card.classList.add("is-committing", "is-submitting");
@@ -155,7 +172,7 @@
 
     window.requestAnimationFrame(function () {
       card.style.transform =
-        "translate3d(" + signedDistance + "px, " + (-20 - velocityLift) + "px, 0) rotate(" + rotation + "deg)";
+        "translate3d(" + finalTranslateX + "px, " + (-28 - velocityLift) + "px, 0) rotate(" + rotation + "deg)";
     });
   }
 
