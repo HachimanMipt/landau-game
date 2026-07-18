@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ asset_url('css/game.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <section class="paper-form">
+    <p class="paper-label">Итог прохождения</p>
+    <h2>{{ page_state.participant_name }}</h2>
+    <p class="lead">{{ page_state.summary.final_status }}</p>
+
+    <div class="summary-grid">
+      <article class="summary-card">
+        <span>Проверено работ</span>
+        <strong>{{ page_state.summary.checked_works }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Итоговый результат</span>
+        <strong>{{ page_state.summary.score }} / {{ page_state.total_questions }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Найдено неточностей</span>
+        <strong>{{ page_state.summary.inaccuracies_found }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Пропущено неточностей</span>
+        <strong>{{ page_state.summary.missed_inaccuracies }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Ошибочно отклонено верных ответов</span>
+        <strong>{{ page_state.summary.correct_answers_rejected }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Среднее время решения</span>
+        <strong>
+          {% if page_state.summary.average_response_time_ms is not none %}
+            {{ page_state.summary.average_response_time_ms }} мс
+          {% else %}
+            —
+          {% endif %}
+        </strong>
+      </article>
+    </div>
+
+    <div class="action-row">
+      <a class="button-link button-link--primary" href="{{ request.url_for('review') }}">Открыть разбор</a>
+      <a class="button-link" href="{{ request.url_for('new_game') }}">Начать новое прохождение</a>
+    </div>
+  </section>
+{% endblock %}

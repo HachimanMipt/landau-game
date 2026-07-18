@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title or settings.project_title_ru }} | {{ settings.project_title_ru }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset_url('css/base.css') }}" />
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body class="{{ body_class or '' }}">
+    <div class="app-shell">
+      {% if show_site_header is not defined or show_site_header %}
+        <header class="site-header">
+          <div>
+            <p class="site-kicker">Архив кафедры теоретической физики</p>
+            <h1 class="site-title">{{ settings.project_title_ru }}</h1>
+          </div>
+          <nav class="site-nav" aria-label="Основная навигация">
+            <a href="{{ request.url_for('start') }}">Старт</a>
+            <a href="{{ request.url_for('register') }}">Регистрация</a>
+            <a href="{{ request.url_for('play') }}">Карточки</a>
+            <a href="{{ request.url_for('admin_login') }}">Admin</a>
+          </nav>
+        </header>
+      {% endif %}
+
+      <main class="page-frame{{ ' ' + page_frame_class if page_frame_class else '' }}">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

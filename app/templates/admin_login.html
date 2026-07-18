@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ asset_url('css/admin.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <section class="admin-panel admin-panel--login">
+    <p class="paper-label">Admin</p>
+    <h2>Вход организатора</h2>
+    <p>Введите пароль администратора, чтобы открыть статистику мероприятия, экспорт CSV и управление сбросом.</p>
+
+    {% if error_message %}
+      <div class="admin-message admin-message--error" role="alert">{{ error_message }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ request.url_for('admin_login_submit') }}" class="admin-login-form">
+      <label>
+        <span>Пароль</span>
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" class="button-link button-link--primary">Войти</button>
+    </form>
+  </section>
+{% endblock %}

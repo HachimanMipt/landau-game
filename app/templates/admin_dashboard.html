@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ asset_url('css/admin.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <section class="admin-panel admin-panel--dashboard">
+    <div class="admin-toolbar">
+      <div>
+        <p class="paper-label">Admin dashboard</p>
+        <h2>Панель организатора</h2>
+        <p>Сводная статистика по мероприятию, экспорт результатов и подтверждаемый сброс данных.</p>
+      </div>
+      <div class="action-row">
+        <a class="button-link button-link--primary" href="{{ request.url_for('admin_export_csv') }}">Экспорт CSV</a>
+        <form method="post" action="{{ request.url_for('admin_logout') }}">
+          <button type="submit">Выйти</button>
+        </form>
+      </div>
+    </div>
+
+    {% if notice_message %}
+      <div class="admin-message admin-message--success" role="status">{{ notice_message }}</div>
+    {% endif %}
+
+    {% if error_message %}
+      <div class="admin-message admin-message--error" role="alert">{{ error_message }}</div>
+    {% endif %}
+
+    <div class="metric-grid">
+      {% for item in dashboard.summary %}
+        <article class="metric-card">
+          <p>{{ item.label }}</p>
+          <strong>{{ item.value }}</strong>
+        </article>
+      {% endfor %}
+    </div>
+
+    <div class="admin-grid">
+      <article class="admin-notes">
+        <h3>Распределение итогов</h3>
+        <div class="admin-breakdown">
+          {% for item in dashboard.final_status_breakdown %}
+            <div class="admin-breakdown__row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="admin-notes">
+        <h3>Сброс данных мероприятия</h3>
+        <p>
+          Для полного удаления участников, прохождений и ответов введите
+          <strong>{{ dashboard.reset_confirmation_value }}</strong>.
+        </p>
+        <form method="post" action="{{ request.url_for('admin_reset') }}" class="admin-reset-form">
+          <label>
+            <span>Подтверждение</span>
+            <input
+              type="text"
+              name="confirmation"
+              placeholder="{{ dashboard.reset_confirmation_value }}"
+              autocomplete="off"
+              required
+            />
+          </label>
+          <button type="submit">Сбросить данные</button>
+        </form>
+      </article>
+    </div>
+
+    <section class="admin-runs">
+      <div class="review-entry__header">
+        <div>
+          <p class="paper-label">Последние прохождения</p>
+          <h3>Состояние участников</h3>
+        </div>
+      </div>
+
+      {% if dashboard.recent_runs %}
+        <div class="admin-run-list">
+          {% for run in dashboard.recent_runs %}
+            <article class="review-entry">
+              <div class="review-entry__header">
+                <div>
+                  <p class="paper-label">{{ run.status_label }}</p>
+                  <h3>{{ run.participant_name }}</h3>
+                </div>
+                <span class="paper-stamp">{{ run.score_text }}</span>
+              </div>
+              <p><strong>Команда:</strong> {{ run.team or "—" }}</p>
+              <p><strong>Прогресс:</strong> {{ run.progress_text }}</p>
+              <p><strong>Старт:</strong> {{ run.started_at }}</p>
+              <p><strong>Последнее обновление:</strong> {{ run.updated_at }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="admin-empty">
+          Пока нет зарегистрированных участников и прохождений.
+        </div>
+      {% endif %}
+    </section>
+  </section>
+{% endblock %}

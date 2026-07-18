@@ -1,0 +1,40 @@
+<article
+  class="paper-card paper-card--decision"
+  data-swipe-preview
+  data-answer-api-url="{{ request.url_for('current_answer') }}"
+  data-left-value="inaccuracy"
+  data-right-value="correct"
+  data-submit-threshold="120"
+  tabindex="0"
+  aria-label="Карточка работы. Смахните влево, если в ответе есть неточность, и вправо, если ответ верный."
+  aria-describedby="decision-accessibility-hint"
+>
+  <header class="paper-card__header">
+    <div>
+      <h3>Проверка студенческой работы</h3>
+    </div>
+  </header>
+
+  <div class="paper-card__content" data-scroll-region>
+    <section class="card-section">
+      <h4>Вопрос</h4>
+      <p>{{ page_state.card_view.meta.question_text }}</p>
+    </section>
+
+    <section class="card-section card-section--answer">
+      <h4>Ответ студента</h4>
+      <p>{{ page_state.card_view.meta.student_answer }}</p>
+    </section>
+  </div>
+
+  <footer class="paper-card__footer paper-card__footer--progress">
+    <p class="paper-stamp">{{ page_state.card_view.meta.stamp }}</p>
+  </footer>
+
+  <div class="swipe-overlay swipe-overlay--left" aria-hidden="true">{{ page_state.card_view.left_label }}</div>
+  <div class="swipe-overlay swipe-overlay--right" aria-hidden="true">{{ page_state.card_view.right_label }}</div>
+  <p class="sr-only" id="decision-accessibility-hint">
+    Смахните карточку влево, если в ответе есть неточность, и вправо, если ответ верный. На компьютере также работают
+    стрелки влево и вправо.
+  </p>
+</article>

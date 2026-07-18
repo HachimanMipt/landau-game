@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ asset_url('css/game.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <div class="sr-only" aria-live="polite" aria-atomic="true" data-live-region></div>
+
+  <section
+    class="desk-stage desk-stage--{{ page_state.card_view.card_type }}"
+    data-stage-left-label="{{ page_state.card_view.left_label }}"
+    data-stage-right-label="{{ page_state.card_view.right_label }}"
+  >
+    <div class="stage-reveal stage-reveal--left" aria-hidden="true">
+      <span>{{ page_state.card_view.left_label }}</span>
+    </div>
+    <div class="stage-reveal stage-reveal--right" aria-hidden="true">
+      <span>{{ page_state.card_view.right_label }}</span>
+    </div>
+
+    <div class="card-stack">
+      {% if page_state.card_view.card_type == "decision" %}
+        {% include "components/decision_card.html" %}
+      {% elif page_state.card_view.card_type == "identity" %}
+        {% include "components/identity_card.html" %}
+      {% else %}
+        {% include "components/landau_card.html" %}
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ asset_url('js/swipe-card.js') }}"></script>
+  <script src="{{ asset_url('js/game.js') }}"></script>
+{% endblock %}

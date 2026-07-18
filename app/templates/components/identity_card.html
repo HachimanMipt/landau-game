@@ -1,0 +1,39 @@
+<article
+  class="paper-card paper-card--note paper-card--identity paper-card--onboarding"
+  data-swipe-preview
+  data-card-mode="registration"
+  data-register-api-url="{{ request.url_for('onboarding_register_api') }}"
+  data-left-label="{{ page_state.card_view.left_label }}"
+  data-right-label="{{ page_state.card_view.right_label }}"
+  data-submit-threshold="120"
+  aria-label="Знакомство с помощником Ландау."
+  aria-describedby="identity-accessibility-hint"
+  tabindex="0"
+>
+  <div class="landau-layout identity-layout" data-scroll-region>
+    <p class="paper-label">{{ page_state.card_view.title }}</p>
+    <blockquote class="landau-quote">{{ page_state.card_view.body }}</blockquote>
+    <form class="identity-card__form" data-registration-form novalidate>
+      <label>
+        <span>Ваше имя или псевдоним</span>
+        <input
+          type="text"
+          name="participant_name"
+          maxlength="40"
+          autocomplete="name"
+          placeholder="Например, Алина"
+          data-participant-name
+          required
+        />
+      </label>
+      <p class="identity-card__hint">Введите имя и смахните карточку в любую сторону.</p>
+      <p class="form-error" data-card-error role="alert" hidden></p>
+    </form>
+  </div>
+
+  <div class="swipe-overlay swipe-overlay--left" aria-hidden="true">{{ page_state.card_view.left_label }}</div>
+  <div class="swipe-overlay swipe-overlay--right" aria-hidden="true">{{ page_state.card_view.right_label }}</div>
+  <p class="sr-only" id="identity-accessibility-hint">
+    Введите имя или псевдоним, затем смахните карточку влево или вправо. На компьютере также можно нажать Enter.
+  </p>
+</article>

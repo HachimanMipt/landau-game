@@ -1,0 +1,32 @@
+<article
+  class="paper-card{% if page_state.card_view.card_type == "landau" %} paper-card--landau{% else %} paper-card--note{% endif %}{% if page_state.card_view.meta.is_onboarding %} paper-card--onboarding{% endif %}{% if page_state.card_view.meta.is_affirming %} paper-card--affirming{% endif %}"
+  data-swipe-preview
+  data-card-mode="advance"
+  data-next-api-url="{% if page_state.kind == "onboarding" %}{{ request.url_for('onboarding_next_api') }}{% else %}{{ request.url_for('play_next_api') }}{% endif %}"
+  data-left-label="{{ page_state.card_view.left_label }}"
+  data-right-label="{{ page_state.card_view.right_label }}"
+  data-submit-threshold="120"
+  aria-live="polite"
+  aria-atomic="true"
+  aria-label="{{ page_state.card_view.title or 'Реплика Ландау' }}"
+  aria-describedby="result-accessibility-hint"
+  tabindex="0"
+>
+  <div class="landau-layout{% if page_state.card_view.card_type == "note" %} note-layout{% endif %}" data-scroll-region>
+    {% if page_state.card_view.title %}
+      <p class="paper-label">{{ page_state.card_view.title }}</p>
+    {% endif %}
+    <blockquote class="landau-quote{% if page_state.card_view.card_type == "note" %} note-copy{% endif %}">
+      {{ page_state.card_view.body }}
+    </blockquote>
+    {% if page_state.card_view.portrait_image_url %}
+      <img class="landau-portrait" src="{{ page_state.card_view.portrait_image_url }}" alt="Лев Ландау" />
+    {% endif %}
+  </div>
+
+  <div class="swipe-overlay swipe-overlay--left" aria-hidden="true">{{ page_state.card_view.left_label }}</div>
+  <div class="swipe-overlay swipe-overlay--right" aria-hidden="true">{{ page_state.card_view.right_label }}</div>
+  <p class="sr-only" id="result-accessibility-hint">
+    Смахните карточку влево или вправо, чтобы перейти дальше. На компьютере также работают стрелки влево и вправо.
+  </p>
+</article>

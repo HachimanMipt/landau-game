@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{{ asset_url('css/game.css') }}" />
+{% endblock %}
+
+{% block content %}
+  <section class="paper-form">
+    <p class="paper-label">Разбор прохождения</p>
+    <h2>{{ participant.name }}</h2>
+    <p class="lead">{{ summary.final_status }}</p>
+
+    <div class="review-list">
+      {% for entry in review_entries %}
+        <article class="review-entry">
+          <div class="review-entry__header">
+            <div>
+              <p class="paper-label">Работа {{ entry.position }}</p>
+              <h3>{{ entry.scene.decision_card.question_text }}</h3>
+            </div>
+            <span class="paper-stamp">
+              {{ "Верно" if entry.response.is_correct else "Неверно" }}
+            </span>
+          </div>
+
+          <p><strong>Ответ студента:</strong> {{ entry.scene.decision_card.student_answer }}</p>
+          <p><strong>Вердикт игрока:</strong> {{ entry.response.selected_verdict.value }}</p>
+          <p><strong>Разбор:</strong> {{ entry.scene.landau_card.explanation }}</p>
+          <p class="secondary-note">{{ entry.scene.landau_card.inaccuracy_explanation }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}
